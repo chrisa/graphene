@@ -636,6 +636,9 @@ text, tspan {
   stroke: none;
   fill: #000;
   font-size: 8px; }
+
+.heatrect {
+  stroke: none; }
 #dashboard {
   padding-top: 6em; }
 /*

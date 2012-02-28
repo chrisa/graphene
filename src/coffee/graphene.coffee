@@ -512,7 +512,7 @@ class Graphene.HeatmapView extends Backbone.View
         .attr("x", (d)-> x(d[2]))
         .attr("y", (d)-> y(d[0]) - height)
         .attr("fill", (d)-> heat(d[1]))
-        .attr("stroke", (d)-> heat(d[1]))
+        .attr("class", "heatrect")
 
     vis = @vis
 

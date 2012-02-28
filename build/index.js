@@ -8344,9 +8344,7 @@ function Gauge(placeholderName, configuration)
         return y(d[0]) - height;
       }).attr("fill", function(d) {
         return heat(d[1]);
-      }).attr("stroke", function(d) {
-        return heat(d[1]);
-      });
+      }).attr("class", "heatrect");
       vis = this.vis;
       if (this.firstrun) {
         this.firstrun = false;
