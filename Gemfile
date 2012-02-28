@@ -1,7 +1,8 @@
-source :gemcutter
+source :rubygems
 
-
-gem 'guard-sprockets', :git => 'git://github.com/jondot/guard-sprockets.git'
+gem 'sprockets'
+gem 'guard-coffeescript'
+gem 'guard-sprockets'
 gem 'coffee-script'
 gem 'uglifier'
 gem 'sass'

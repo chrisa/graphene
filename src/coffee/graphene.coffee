@@ -105,7 +105,7 @@ class Graphene.DemoTimeSeries extends Backbone.Model
 
   refresh: ()=>
     # clone data - tricks d3/backbone refs
-    @data = _.map @data, (d)-> 
+    @data = _.map @data, (d)->
       d = _.clone(d)
       d.points = _.map(d.points, (p)-> [p[0], p[1]])
       d
@@ -150,7 +150,7 @@ class Graphene.TimeSeries extends Graphene.GraphiteModel
         points: _.reject(dp.datapoints, (d)-> d[0] == null),
         ymin: min,
         ymax: max,
-        label: dp.target 
+        label: dp.target
       }
     data = _.reject data, (d)-> d == null
     @set(data:data)
@@ -434,20 +434,20 @@ class Graphene.TimeSeriesView extends Backbone.View
     vis.selectAll("path.area")
         .data(points)
         .attr("transform", (d)-> "translate(" + x(d[1][1]) + ")")
-        .attr("d", area) 
-        .transition() 
+        .attr("d", area)
+        .transition()
         .ease("linear")
-        .duration(@animate_ms) 
+        .duration(@animate_ms)
         .attr("transform", (d) -> "translate(" + x(d[0][1]) + ")")
 
 
     vis.selectAll("path.line")
         .data(points)
         .attr("transform", (d)-> "translate(" + x(d[1][1]) + ")")
-        .attr("d", line) 
-        .transition() 
+        .attr("d", line)
+        .transition()
         .ease("linear")
-        .duration(@animate_ms) 
+        .duration(@animate_ms)
         .attr("transform", (d) -> "translate(" + x(d[0][1]) + ")")
 
 
