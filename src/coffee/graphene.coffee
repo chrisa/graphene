@@ -469,48 +469,42 @@ class Graphene.HeatmapView extends Backbone.View
     console.log("rendering.")
     data = @model.get('data')
 
+    # munge
+
     data = _.map data, (d)-> { bucket: parseInt(d.label.split('.')[5]), points: d.points }
     data = _.sortBy(data, (p)-> p.bucket)
     buckets = _.map data, (s)-> s.bucket
 
-    data = _.map(data, (series)->
-        _.map(series.points, (s)-> [series.bucket, s[0], s[1]]))
+    # scales
 
-    #console.log data
+    heat = d3.scale.linear().domain([0,4]).range(["white","red"])
+
+    x = d3.time.scale().domain([data[0].points[0][1], data[0].points[(data[0].points.length)-1][1]]).range([0, @width])
+    y = d3.scale.ordinal().domain(buckets).rangeBands([@height, 0])
+
+    # scale height and width of heatmap boxes
+
+    width = x(data[0].points[1][1]) - x(data[0].points[0][1])
+    height = @height / buckets.length
+
+    # filter out zero areas of the heatmap
+
+    data = _.map(data, (series)->
+        _.map((point for point in series.points when point[0] > 0), (s)-> [series.bucket, s[0], s[1]]))
 
     heatmap = [].concat data...
 
-    #console.log heatmap
-
-    #
-    # build dynamic x & y metrics.
-    #
-
-    console.log(buckets)
-
-    x = d3.time.scale().domain([data[0][0][2], data[0][data[0].length-1][2]]).range([0, @width])
-    y = d3.scale.ordinal().domain(buckets).rangeBands([@height, 0])
-
-    heat = d3.scale.linear().domain([0,8]).range(["white","red"])
-
-    #
     # build axis
-    #
+
     xtick_sz = if @display_verticals then -@height else 0
     xAxis = d3.svg.axis().scale(x).ticks(4).tickSize(xtick_sz).tickSubdivide(true)
-    yAxis = d3.svg.axis().scale(y).tickSize(20).orient("left").tickFormat(d3.format("ms"))
+    yAxis = d3.svg.axis().scale(y).ticks(4).tickSize(20).orient("left").tickFormat(d3.format("ms"))
 
-    vis = @vis
+    # bind the data with d3
 
-    # scale height and width of heatmap boxes
-    width = x(data[0][1][2]) - x(data[0][0][2])
-    height = @height / buckets.length
+    rectg = @vis.append("g").attr("class", "rects")
 
-    #
-    # get raw data points (throw away all of the other blabber
-    #
-
-    vis.selectAll("rect")
+    rectg.selectAll("rect")
         .data(heatmap)
       .enter().append("svg:rect")
         .attr("width", width)
@@ -520,12 +514,11 @@ class Graphene.HeatmapView extends Backbone.View
         .attr("fill", (d)-> heat(d[1]))
         .attr("stroke", (d)-> heat(d[1]))
 
+    vis = @vis
+
     if @firstrun
       @firstrun = false
 
-      #
-      # Axis
-      #
       vis.append("svg:g")
           .attr("class", "x axis")
           .attr("transform", "translate(0," + @height + ")")
@@ -534,29 +527,3 @@ class Graphene.HeatmapView extends Backbone.View
           .call(xAxis)
 
       vis.append("svg:g").attr("class", "y axis").call(yAxis)
-
-    #---------------------------------------------------------------------------------------#
-    # Update Graph
-    #---------------------------------------------------------------------------------------#
-
-    # vis.transition().ease("linear").duration(@animate_ms).select(".x.axis").call(xAxis)
-    # vis.select(".y.axis").call(yAxis)
-
-    # vis.selectAll("path.area")
-    #     .data(points)
-    #     .attr("transform", (d)-> "translate(" + x(d[1][1]) + ")")
-    #     .attr("d", area)
-    #     .transition()
-    #     .ease("linear")
-    #     .duration(@animate_ms)
-    #     .attr("transform", (d) -> "translate(" + x(d[0][1]) + ")")
-
-
-    # vis.selectAll("path.line")
-    #     .data(points)
-    #     .attr("transform", (d)-> "translate(" + x(d[1][1]) + ")")
-    #     .attr("d", line)
-    #     .transition()
-    #     .ease("linear")
-    #     .duration(@animate_ms)
-    #     .attr("transform", (d) -> "translate(" + x(d[0][1]) + ")")

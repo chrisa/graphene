@@ -8298,7 +8298,7 @@ function Gauge(placeholderName, configuration)
     };
 
     HeatmapView.prototype.render = function() {
-      var buckets, data, heat, heatmap, height, vis, width, x, xAxis, xtick_sz, y, yAxis, _ref;
+      var buckets, data, heat, heatmap, height, rectg, vis, width, x, xAxis, xtick_sz, y, yAxis, _ref;
       console.log("rendering.");
       data = this.model.get('data');
       data = _.map(data, function(d) {
@@ -8313,23 +8313,32 @@ function Gauge(placeholderName, configuration)
       buckets = _.map(data, function(s) {
         return s.bucket;
       });
+      heat = d3.scale.linear().domain([0, 4]).range(["white", "red"]);
+      x = d3.time.scale().domain([data[0].points[0][1], data[0].points[data[0].points.length - 1][1]]).range([0, this.width]);
+      y = d3.scale.ordinal().domain(buckets).rangeBands([this.height, 0]);
+      width = x(data[0].points[1][1]) - x(data[0].points[0][1]);
+      height = this.height / buckets.length;
       data = _.map(data, function(series) {
-        return _.map(series.points, function(s) {
+        var point;
+        return _.map((function() {
+          var _i, _len, _ref, _results;
+          _ref = series.points;
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            point = _ref[_i];
+            if (point[0] > 0) _results.push(point);
+          }
+          return _results;
+        })(), function(s) {
           return [series.bucket, s[0], s[1]];
         });
       });
       heatmap = (_ref = []).concat.apply(_ref, data);
-      console.log(buckets);
-      x = d3.time.scale().domain([data[0][0][2], data[0][data[0].length - 1][2]]).range([0, this.width]);
-      y = d3.scale.ordinal().domain(buckets).rangeBands([this.height, 0]);
-      heat = d3.scale.linear().domain([0, 8]).range(["white", "red"]);
       xtick_sz = this.display_verticals ? -this.height : 0;
       xAxis = d3.svg.axis().scale(x).ticks(4).tickSize(xtick_sz).tickSubdivide(true);
-      yAxis = d3.svg.axis().scale(y).tickSize(20).orient("left").tickFormat(d3.format("ms"));
-      vis = this.vis;
-      width = x(data[0][1][2]) - x(data[0][0][2]);
-      height = this.height / buckets.length;
-      vis.selectAll("rect").data(heatmap).enter().append("svg:rect").attr("width", width).attr("height", height).attr("x", function(d) {
+      yAxis = d3.svg.axis().scale(y).ticks(4).tickSize(20).orient("left").tickFormat(d3.format("ms"));
+      rectg = this.vis.append("g").attr("class", "rects");
+      rectg.selectAll("rect").data(heatmap).enter().append("svg:rect").attr("width", width).attr("height", height).attr("x", function(d) {
         return x(d[2]);
       }).attr("y", function(d) {
         return y(d[0]) - height;
@@ -8338,6 +8347,7 @@ function Gauge(placeholderName, configuration)
       }).attr("stroke", function(d) {
         return heat(d[1]);
       });
+      vis = this.vis;
       if (this.firstrun) {
         this.firstrun = false;
         vis.append("svg:g").attr("class", "x axis").attr("transform", "translate(0," + this.height + ")").transition().duration(this.animate_ms).call(xAxis);
