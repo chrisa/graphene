@@ -1,11 +1,3 @@
-GIT
-  remote: git://github.com/jondot/guard-sprockets.git
-  revision: 4c6ebac094d5f06452bcc74fe75e7c1e2c4f99f2
-  specs:
-    guard-sprockets (0.2.0)
-      guard (>= 0.2.2)
-      sprockets (~> 2)
-
 GEM
   remote: http://rubygems.org/
   specs:
@@ -48,4 +40,5 @@ DEPENDENCIES
   guard-coffeescript
   guard-sprockets
   sass
+  sprockets
   uglifier
