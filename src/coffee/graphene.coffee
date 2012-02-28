@@ -1,4 +1,5 @@
 
+
 class Graphene
   demo:->
     @is_demo = true
@@ -19,19 +20,6 @@ class Graphene
         new klass(_.extend({ model: ts }, opts))
       ts.start()
       console.log ts
-
-  discover: (url, dash, parent_specifier, cb)->
-    $.get "#{url}/dashboard/load/#{dash}", (data)->
-      i = 0
-      desc = {}
-      _.each data['state']['graphs'], (graph)->
-        path = graph[2]
-        desc["Graph #{i}"] =
-          source: "#{url}#{path}&format=json"
-          TimeSeries:
-            parent: parent_specifier(i, url)
-        i++
-      cb(desc)
 
 @Graphene = Graphene
 
@@ -154,8 +142,6 @@ class Graphene.TimeSeries extends Graphene.GraphiteModel
       }
     data = _.reject data, (d)-> d == null
     @set(data:data)
-
-
 
 
 
@@ -451,4 +437,126 @@ class Graphene.TimeSeriesView extends Backbone.View
         .attr("transform", (d) -> "translate(" + x(d[0][1]) + ")")
 
 
+class Graphene.HeatmapView extends Backbone.View
+  model: Graphene.TimeSeries
+  tagName: 'div'
 
+  initialize: ()->
+    @line_height = @options.line_height || 16
+    @animate_ms = @options.animate_ms || 500
+    @display_verticals = @options.display_verticals || false
+    @width = @options.width || 400
+    @height = @options.height || 100
+    @padding = @options.padding || [@line_height*2, 32, @line_height, 64] #trbl
+    @title = @options.title
+    @label_formatter = @options.label_formatter || (label) -> label
+    @firstrun = true
+    @parent = @options.parent || '#parent'
+
+    @vis = d3.select(@parent).append("svg")
+            .attr("class", "tsview")
+            .attr("width",  @width  + (@padding[1]+@padding[3]))
+            .attr("height", @height + (@padding[0]+@padding[2]))
+            .append("g")
+            .attr("transform", "translate(" + @padding[3] + "," + @padding[0] + ")")
+    @value_format = d3.format(".3s")
+
+    @model.bind('change', @render)
+    console.log("TS view: #{@width}x#{@height} padding:#{@padding} animate: #{@animate_ms}")
+
+
+  render: ()=>
+    console.log("rendering.")
+    data = @model.get('data')
+
+    data = _.map data, (d)-> { bucket: parseInt(d.label.split('.')[5]), points: d.points }
+    data = _.sortBy(data, (p)-> p.bucket)
+    buckets = _.map data, (s)-> s.bucket
+
+    data = _.map(data, (series)->
+        _.map(series.points, (s)-> [series.bucket, s[0], s[1]]))
+
+    #console.log data
+
+    heatmap = [].concat data...
+
+    #console.log heatmap
+
+    #
+    # build dynamic x & y metrics.
+    #
+
+    console.log(buckets)
+
+    x = d3.time.scale().domain([data[0][0][2], data[0][data[0].length-1][2]]).range([0, @width])
+    y = d3.scale.ordinal().domain(buckets).rangeBands([@height, 0])
+
+    heat = d3.scale.linear().domain([0,8]).range(["white","red"])
+
+    #
+    # build axis
+    #
+    xtick_sz = if @display_verticals then -@height else 0
+    xAxis = d3.svg.axis().scale(x).ticks(4).tickSize(xtick_sz).tickSubdivide(true)
+    yAxis = d3.svg.axis().scale(y).tickSize(20).orient("left").tickFormat(d3.format("ms"))
+
+    vis = @vis
+
+    # scale height and width of heatmap boxes
+    width = x(data[0][1][2]) - x(data[0][0][2])
+    height = @height / buckets.length
+
+    #
+    # get raw data points (throw away all of the other blabber
+    #
+
+    vis.selectAll("rect")
+        .data(heatmap)
+      .enter().append("svg:rect")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("x", (d)-> x(d[2]))
+        .attr("y", (d)-> y(d[0]) - height)
+        .attr("fill", (d)-> heat(d[1]))
+        .attr("stroke", (d)-> heat(d[1]))
+
+    if @firstrun
+      @firstrun = false
+
+      #
+      # Axis
+      #
+      vis.append("svg:g")
+          .attr("class", "x axis")
+          .attr("transform", "translate(0," + @height + ")")
+          .transition()
+          .duration(@animate_ms)
+          .call(xAxis)
+
+      vis.append("svg:g").attr("class", "y axis").call(yAxis)
+
+    #---------------------------------------------------------------------------------------#
+    # Update Graph
+    #---------------------------------------------------------------------------------------#
+
+    # vis.transition().ease("linear").duration(@animate_ms).select(".x.axis").call(xAxis)
+    # vis.select(".y.axis").call(yAxis)
+
+    # vis.selectAll("path.area")
+    #     .data(points)
+    #     .attr("transform", (d)-> "translate(" + x(d[1][1]) + ")")
+    #     .attr("d", area)
+    #     .transition()
+    #     .ease("linear")
+    #     .duration(@animate_ms)
+    #     .attr("transform", (d) -> "translate(" + x(d[0][1]) + ")")
+
+
+    # vis.selectAll("path.line")
+    #     .data(points)
+    #     .attr("transform", (d)-> "translate(" + x(d[1][1]) + ")")
+    #     .attr("d", line)
+    #     .transition()
+    #     .ease("linear")
+    #     .duration(@animate_ms)
+    #     .attr("transform", (d) -> "translate(" + x(d[0][1]) + ")")

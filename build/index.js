@@ -7817,26 +7817,6 @@ function Gauge(placeholderName, configuration)
       });
     };
 
-    Graphene.prototype.discover = function(url, dash, parent_specifier, cb) {
-      return $.get("" + url + "/dashboard/load/" + dash, function(data) {
-        var desc, i;
-        i = 0;
-        desc = {};
-        _.each(data['state']['graphs'], function(graph) {
-          var path;
-          path = graph[2];
-          desc["Graph " + i] = {
-            source: "" + url + path + "&format=json",
-            TimeSeries: {
-              parent: parent_specifier(i, url)
-            }
-          };
-          return i++;
-        });
-        return cb(desc);
-      });
-    };
-
     return Graphene;
 
   })();
@@ -8282,6 +8262,90 @@ function Gauge(placeholderName, configuration)
     };
 
     return TimeSeriesView;
+
+  })(Backbone.View);
+
+  Graphene.HeatmapView = (function(_super) {
+
+    __extends(HeatmapView, _super);
+
+    function HeatmapView() {
+      this.render = __bind(this.render, this);
+      HeatmapView.__super__.constructor.apply(this, arguments);
+    }
+
+    HeatmapView.prototype.model = Graphene.TimeSeries;
+
+    HeatmapView.prototype.tagName = 'div';
+
+    HeatmapView.prototype.initialize = function() {
+      this.line_height = this.options.line_height || 16;
+      this.animate_ms = this.options.animate_ms || 500;
+      this.display_verticals = this.options.display_verticals || false;
+      this.width = this.options.width || 400;
+      this.height = this.options.height || 100;
+      this.padding = this.options.padding || [this.line_height * 2, 32, this.line_height, 64];
+      this.title = this.options.title;
+      this.label_formatter = this.options.label_formatter || function(label) {
+        return label;
+      };
+      this.firstrun = true;
+      this.parent = this.options.parent || '#parent';
+      this.vis = d3.select(this.parent).append("svg").attr("class", "tsview").attr("width", this.width + (this.padding[1] + this.padding[3])).attr("height", this.height + (this.padding[0] + this.padding[2])).append("g").attr("transform", "translate(" + this.padding[3] + "," + this.padding[0] + ")");
+      this.value_format = d3.format(".3s");
+      this.model.bind('change', this.render);
+      return console.log("TS view: " + this.width + "x" + this.height + " padding:" + this.padding + " animate: " + this.animate_ms);
+    };
+
+    HeatmapView.prototype.render = function() {
+      var buckets, data, heat, heatmap, height, vis, width, x, xAxis, xtick_sz, y, yAxis, _ref;
+      console.log("rendering.");
+      data = this.model.get('data');
+      data = _.map(data, function(d) {
+        return {
+          bucket: parseInt(d.label.split('.')[5]),
+          points: d.points
+        };
+      });
+      data = _.sortBy(data, function(p) {
+        return p.bucket;
+      });
+      buckets = _.map(data, function(s) {
+        return s.bucket;
+      });
+      data = _.map(data, function(series) {
+        return _.map(series.points, function(s) {
+          return [series.bucket, s[0], s[1]];
+        });
+      });
+      heatmap = (_ref = []).concat.apply(_ref, data);
+      console.log(buckets);
+      x = d3.time.scale().domain([data[0][0][2], data[0][data[0].length - 1][2]]).range([0, this.width]);
+      y = d3.scale.ordinal().domain(buckets).rangeBands([this.height, 0]);
+      heat = d3.scale.linear().domain([0, 8]).range(["white", "red"]);
+      xtick_sz = this.display_verticals ? -this.height : 0;
+      xAxis = d3.svg.axis().scale(x).ticks(4).tickSize(xtick_sz).tickSubdivide(true);
+      yAxis = d3.svg.axis().scale(y).tickSize(20).orient("left").tickFormat(d3.format("ms"));
+      vis = this.vis;
+      width = x(data[0][1][2]) - x(data[0][0][2]);
+      height = this.height / buckets.length;
+      vis.selectAll("rect").data(heatmap).enter().append("svg:rect").attr("width", width).attr("height", height).attr("x", function(d) {
+        return x(d[2]);
+      }).attr("y", function(d) {
+        return y(d[0]) - height;
+      }).attr("fill", function(d) {
+        return heat(d[1]);
+      }).attr("stroke", function(d) {
+        return heat(d[1]);
+      });
+      if (this.firstrun) {
+        this.firstrun = false;
+        vis.append("svg:g").attr("class", "x axis").attr("transform", "translate(0," + this.height + ")").transition().duration(this.animate_ms).call(xAxis);
+        return vis.append("svg:g").attr("class", "y axis").call(yAxis);
+      }
+    };
+
+    return HeatmapView;
 
   })(Backbone.View);
 
