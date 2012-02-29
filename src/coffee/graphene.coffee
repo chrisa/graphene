@@ -469,15 +469,18 @@ class Graphene.HeatmapView extends Backbone.View
     console.log("rendering.")
     data = @model.get('data')
 
+    # heatmap scale
+
+    max = _.max data, (d)-> d.ymax
+    heat = d3.scale.linear().domain([0,max.ymax]).range(["white","red"])
+
     # munge
 
     data = _.map data, (d)-> { bucket: parseInt(d.label.split('.')[5]), points: d.points }
     data = _.sortBy(data, (p)-> p.bucket)
     buckets = _.map data, (s)-> s.bucket
 
-    # scales
-
-    heat = d3.scale.linear().domain([0,4]).range(["white","red"])
+    # x and y scales
 
     x = d3.time.scale().domain([data[0].points[0][1], data[0].points[(data[0].points.length)-1][1]]).range([0, @width])
     y = d3.scale.ordinal().domain(buckets).rangeBands([@height, 0])
@@ -494,11 +497,16 @@ class Graphene.HeatmapView extends Backbone.View
 
     heatmap = [].concat data...
 
-    # build axis
+    # build axes
 
     xtick_sz = if @display_verticals then -@height else 0
     xAxis = d3.svg.axis().scale(x).ticks(4).tickSize(xtick_sz).tickSubdivide(true)
-    yAxis = d3.svg.axis().scale(y).ticks(4).tickSize(20).orient("left").tickFormat(d3.format("ms"))
+
+    i = 1
+    some_buckets = (bucket for bucket in buckets when ++i%3 == 0)
+
+    yticks = d3.scale.ordinal().domain(some_buckets).rangeBands([@height, 0])
+    yAxis = d3.svg.axis().scale(yticks).ticks(4).tickSize(20).orient("left").tickFormat(d3.format("ms"))
 
     # bind the data with d3
 

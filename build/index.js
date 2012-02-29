@@ -8298,9 +8298,13 @@ function Gauge(placeholderName, configuration)
     };
 
     HeatmapView.prototype.render = function() {
-      var buckets, data, heat, heatmap, height, rectg, vis, width, x, xAxis, xtick_sz, y, yAxis, _ref;
+      var bucket, buckets, data, heat, heatmap, height, i, max, rectg, some_buckets, vis, width, x, xAxis, xtick_sz, y, yAxis, yticks, _ref;
       console.log("rendering.");
       data = this.model.get('data');
+      max = _.max(data, function(d) {
+        return d.ymax;
+      });
+      heat = d3.scale.linear().domain([0, max.ymax]).range(["white", "red"]);
       data = _.map(data, function(d) {
         return {
           bucket: parseInt(d.label.split('.')[5]),
@@ -8313,7 +8317,6 @@ function Gauge(placeholderName, configuration)
       buckets = _.map(data, function(s) {
         return s.bucket;
       });
-      heat = d3.scale.linear().domain([0, 4]).range(["white", "red"]);
       x = d3.time.scale().domain([data[0].points[0][1], data[0].points[data[0].points.length - 1][1]]).range([0, this.width]);
       y = d3.scale.ordinal().domain(buckets).rangeBands([this.height, 0]);
       width = x(data[0].points[1][1]) - x(data[0].points[0][1]);
@@ -8336,7 +8339,18 @@ function Gauge(placeholderName, configuration)
       heatmap = (_ref = []).concat.apply(_ref, data);
       xtick_sz = this.display_verticals ? -this.height : 0;
       xAxis = d3.svg.axis().scale(x).ticks(4).tickSize(xtick_sz).tickSubdivide(true);
-      yAxis = d3.svg.axis().scale(y).ticks(4).tickSize(20).orient("left").tickFormat(d3.format("ms"));
+      i = 1;
+      some_buckets = (function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = buckets.length; _i < _len; _i++) {
+          bucket = buckets[_i];
+          if (++i % 3 === 0) _results.push(bucket);
+        }
+        return _results;
+      })();
+      yticks = d3.scale.ordinal().domain(some_buckets).rangeBands([this.height, 0]);
+      yAxis = d3.svg.axis().scale(yticks).ticks(4).tickSize(20).orient("left").tickFormat(d3.format("ms"));
       rectg = this.vis.append("g").attr("class", "rects");
       rectg.selectAll("rect").data(heatmap).enter().append("svg:rect").attr("width", width).attr("height", height).attr("x", function(d) {
         return x(d[2]);
