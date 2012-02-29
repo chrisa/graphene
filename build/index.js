@@ -8298,7 +8298,7 @@ function Gauge(placeholderName, configuration)
     };
 
     HeatmapView.prototype.render = function() {
-      var bucket, buckets, data, heat, heatmap, height, i, max, rectg, some_buckets, vis, width, x, xAxis, xtick_sz, y, yAxis, yticks, _ref;
+      var bucket, buckets, data, heat, heatmap, height, i, max, rectg, rects, some_buckets, step, vis, width, x, xAxis, xtick_sz, y, yAxis, yticks, _ref;
       console.log("rendering.");
       data = this.model.get('data');
       max = _.max(data, function(d) {
@@ -8352,13 +8352,18 @@ function Gauge(placeholderName, configuration)
       yticks = d3.scale.ordinal().domain(some_buckets).rangeBands([this.height, 0]);
       yAxis = d3.svg.axis().scale(yticks).ticks(4).tickSize(20).orient("left").tickFormat(d3.format("ms"));
       rectg = this.vis.append("g").attr("class", "rects");
-      rectg.selectAll("rect").data(heatmap).enter().append("svg:rect").attr("width", width).attr("height", height).attr("x", function(d) {
-        return x(d[2]);
+      rects = rectg.selectAll("rect").data(heatmap);
+      rects.enter().append("svg:rect").attr("width", width).attr("height", height).attr("x", function(d) {
+        return x(d[2]) + 0.5;
       }).attr("y", function(d) {
-        return y(d[0]) - height;
+        return y(d[0]) - height + 0.5;
       }).attr("fill", function(d) {
         return heat(d[1]);
       }).attr("class", "heatrect");
+      step = width / 6;
+      rects.transition().ease("linear").duration(this.animate_ms).attr("x", function(d) {
+        return x(d[2]) - step;
+      });
       vis = this.vis;
       if (this.firstrun) {
         this.firstrun = false;

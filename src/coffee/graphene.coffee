@@ -33,7 +33,7 @@ class Graphene.GraphiteModel extends Backbone.Model
     data: null
     ymin: 0
     ymax: 0
-    refresh_interval: 10000
+    refresh_interval: 60000
 
   debug:()->
     console.log("#{@get('refresh_interval')}")
@@ -508,30 +508,47 @@ class Graphene.HeatmapView extends Backbone.View
     yticks = d3.scale.ordinal().domain(some_buckets).rangeBands([@height, 0])
     yAxis = d3.svg.axis().scale(yticks).ticks(4).tickSize(20).orient("left").tickFormat(d3.format("ms"))
 
-    # bind the data with d3
-
-    rectg = @vis.append("g").attr("class", "rects")
-
-    rectg.selectAll("rect")
-        .data(heatmap)
-      .enter().append("svg:rect")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("x", (d)-> x(d[2]))
-        .attr("y", (d)-> y(d[0]) - height)
-        .attr("fill", (d)-> heat(d[1]))
-        .attr("class", "heatrect")
-
-    vis = @vis
+    # draw the axes and heatmap svg:g
 
     if @firstrun
       @firstrun = false
 
-      vis.append("svg:g")
+      @vis.append("svg:g")
           .attr("class", "x axis")
           .attr("transform", "translate(0," + @height + ")")
           .transition()
           .duration(@animate_ms)
           .call(xAxis)
 
-      vis.append("svg:g").attr("class", "y axis").call(yAxis)
+      @vis.append("svg:g").attr("class", "y axis").call(yAxis)
+
+      @rectg = @vis.append("g").attr("class", "rects")
+
+    # bind the data with d3
+
+    rects = @rectg.selectAll("rect")
+        .data(heatmap, (d)-> [d[0], d[2]]) # map by bucket and timestamp
+
+    rects.enter().append("svg:rect")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("x", (d)-> x(d[2]) + width)
+        .attr("y", (d)-> y(d[0]) - height)
+        .attr("fill", (d)-> heat(d[1]))
+        .attr("class", "heatrect")
+      .transition()
+        .duration(@animate_ms)
+        .attr("x", (d)-> x(d[2]))
+
+    rects.transition()
+        .ease("linear")
+        .duration(@animate_ms)
+        .attr("x", (d)-> x(d[2]))
+
+    rects.exit()
+        .transition()
+        .duration(@animate_ms)
+        .attr("x", (d)-> x(d[2]) - width)
+        .remove();
+
+
